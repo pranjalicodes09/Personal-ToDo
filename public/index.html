@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Todo Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>Todo Tracker</h1>
+    <div id="user-bar" class="hidden">
+      <span id="user-email"></span>
+      <button id="logout-btn" type="button">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Login & Register Box -->
+    <section id="auth-section" class="box">
+      <div class="tabs">
+        <button id="show-login" type="button" class="active">Login</button>
+        <button id="show-register" type="button">Register</button>
+      </div>
+
+      <p id="auth-error" class="error hidden"></p>
+
+      <form id="auth-form">
+        <div id="name-row" class="field hidden">
+          <label for="name">Name (optional)</label>
+          <input id="name" type="text" maxlength="80" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="off" required />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="new-password" required />
+        </div>
+
+        <button id="auth-submit" type="submit" class="primary">Login</button>
+      </form>
+    </section>
+
+    <!-- Main Todo App -->
+    <section id="app-section" class="hidden">
+      <p id="app-error" class="error hidden"></p>
+
+      <!-- Add Task Form -->
+      <form id="task-form" class="box">
+        <h2>New Task</h2>
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" type="text" maxlength="140" required />
+        </div>
+
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" rows="2" maxlength="2000"></textarea>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="priority">Priority</label>
+            <select id="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="due-date">Due Date</label>
+            <input id="due-date" type="date" />
+          </div>
+        </div>
+
+        <button type="submit" class="primary">Add Task</button>
+      </form>
+
+      <!-- Filters & Search -->
+      <div class="box filters">
+        <div class="tabs">
+          <button type="button" class="status-btn active" data-status="all">All</button>
+          <button type="button" class="status-btn" data-status="open">Open</button>
+          <button type="button" class="status-btn" data-status="completed">Completed</button>
+        </div>
+
+        <div class="row">
+          <input id="search" type="search" placeholder="Search tasks..." aria-label="Search tasks" />
+          <select id="filter-priority" aria-label="Filter by priority">
+            <option value="">All Priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select id="sort-by" aria-label="Sort tasks">
+            <option value="createdAt:desc">Newest</option>
+            <option value="createdAt:asc">Oldest</option>
+            <option value="dueDate:asc">Due Date (Earliest)</option>
+            <option value="dueDate:desc">Due Date (Latest)</option>
+            <option value="priority:desc">Priority (High-Low)</option>
+            <option value="priority:asc">Priority (Low-High)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Task List -->
+      <p id="empty-msg" class="empty hidden">No tasks found.</p>
+      <ul id="task-list" class="task-list"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
