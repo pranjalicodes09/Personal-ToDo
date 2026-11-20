@@ -4,12 +4,15 @@ let currentStatus = 'all';
 
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
-const userBar = document.getElementById('user-bar');
 const userEmail = document.getElementById('user-email');
 const authError = document.getElementById('auth-error');
 const appError = document.getElementById('app-error');
 const taskList = document.getElementById('task-list');
 const emptyMsg = document.getElementById('empty-msg');
+
+const createPanel = document.getElementById('create-panel');
+const tasksPanel = document.getElementById('tasks-panel');
+const panelTitle = document.getElementById('panel-title');
 
 async function request(url, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -38,12 +41,11 @@ async function request(url, options = {}) {
 }
 
 function logoutLocal() {
-   token = '';
+  token = '';
   localStorage.removeItem('token');
   authError.classList.add('hidden');
   authSection.classList.remove('hidden');
   appSection.classList.add('hidden');
-  userBar.classList.add('hidden');
 
   const clearInputs = () => {
     document.getElementById('name').value = '';
@@ -54,15 +56,34 @@ function logoutLocal() {
   setTimeout(clearInputs, 50);
 }
 
+function switchSidebarView(view) {
+  document.querySelectorAll('.nav-item').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
+
+  if (view === 'create') {
+    createPanel.classList.remove('hidden');
+    tasksPanel.classList.add('hidden');
+    return;
+  }
+
+  createPanel.classList.add('hidden');
+  tasksPanel.classList.remove('hidden');
+  currentStatus = view;
+
+  const titles = { all: 'All Tasks', open: 'Open Tasks', completed: 'Completed Tasks' };
+  panelTitle.textContent = titles[view] || 'All Tasks';
+  loadTasks();
+}
+
 function showApp(user) {
   userEmail.textContent = user.name ? `${user.name} (${user.email})` : user.email;
   authSection.classList.add('hidden');
   appSection.classList.remove('hidden');
-  userBar.classList.remove('hidden');
-  loadTasks();
+  switchSidebarView('all');
 }
 
-// Switch between Login and Register
+// Portal Login / Register Tabs
 document.getElementById('show-login').addEventListener('click', () => {
   isRegister = false;
   document.getElementById('show-login').classList.add('active');
@@ -119,7 +140,20 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   logoutLocal();
 });
 
-// Add Task
+// Left Sidebar Navigation
+document.querySelectorAll('.nav-item').forEach((btn) => {
+  btn.addEventListener('click', () => switchSidebarView(btn.dataset.view));
+});
+
+document.getElementById('quick-add-btn').addEventListener('click', () => {
+  switchSidebarView('create');
+});
+
+document.getElementById('cancel-create-btn').addEventListener('click', () => {
+  switchSidebarView('all');
+});
+
+// Create Task
 document.getElementById('task-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   appError.classList.add('hidden');
@@ -138,28 +172,18 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
     });
     document.getElementById('task-form').reset();
     document.getElementById('priority').value = 'medium';
-    loadTasks();
+    switchSidebarView('all');
   } catch (err) {
     appError.textContent = err.message;
     appError.classList.remove('hidden');
   }
 });
 
-// Filters & Sort
-document.querySelectorAll('.status-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.status-btn').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentStatus = btn.dataset.status;
-    loadTasks();
-  });
-});
-
+// Search, Priority Filter, and Sort
 document.getElementById('search').addEventListener('input', loadTasks);
 document.getElementById('filter-priority').addEventListener('change', loadTasks);
 document.getElementById('sort-by').addEventListener('change', loadTasks);
 
-// Fetch and render tasks
 async function loadTasks() {
   appError.classList.add('hidden');
 
@@ -244,9 +268,10 @@ function renderTasks(tasks) {
 
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
+    editBtn.className = 'pill-btn';
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', async () => {
-      const newTitle = prompt('Edit title:', task.title);
+      const newTitle = window.prompt('Edit title:', task.title);
       if (newTitle === null) return;
       const newDesc = prompt('Edit description:', task.description);
       if (newDesc === null) return;
