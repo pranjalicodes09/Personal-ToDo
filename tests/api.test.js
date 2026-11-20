@@ -36,42 +36,56 @@ async function api(method, route, body, token) {
   return { status: res.status, data };
 }
 
-test('auth endpoints handle register, login, and logout', async () => {
-  const shortPass = await api('POST', '/api/auth/register', { email: 'a@test.com', password: '123' });
-  assert.equal(shortPass.status, 400);
+test('auth register, login, me, and logout', async () => {
+  const badReg = await api('POST', '/api/auth/register', { email: 'a@test.com', password: '123' });
+  assert.equal(badReg.status, 400);
 
   const reg = await api('POST', '/api/auth/register', { email: 'a@test.com', password: 'Password1' });
   assert.equal(reg.status, 201);
-  assert.ok(reg.data.token);
+  assert.equal(reg.data.email, 'a@test.com');
 
-  const badLogin = await api('POST', '/api/auth/login', { email: 'a@test.com', password: 'Wrong123' });
-  assert.equal(badLogin.status, 401);
+  const missingField = await api('POST', '/api/auth/login', { email: 'a@test.com' });
+  assert.equal(missingField.status, 400);
 
-  const logout = await api('POST', '/api/auth/logout', {}, reg.data.token);
-  assert.equal(logout.status, 204);
+  const wrongPass = await api('POST', '/api/auth/login', { email: 'a@test.com', password: 'Wrong123' });
+  assert.equal(wrongPass.status, 401);
 
   const me = await api('GET', '/api/auth/me', null, reg.data.token);
-  assert.equal(me.status, 401);
+  assert.equal(me.status, 200);
+  assert.equal(me.data.email, 'a@test.com');
+
+  const out = await api('POST', '/api/auth/logout', {}, reg.data.token);
+  assert.equal(out.status, 204);
+
+  const afterOut = await api('GET', '/api/auth/me', null, reg.data.token);
+  assert.equal(afterOut.status, 401);
 });
 
-test('tasks require auth, support CRUD, and isolate users', async () => {
-  const unauth = await api('GET', '/api/tasks');
-  assert.equal(unauth.status, 401);
+test('tasks CRUD, validation, and user isolation', async () => {
+  const noAuth = await api('GET', '/api/tasks');
+  assert.equal(noAuth.status, 401);
 
   const u1 = await api('POST', '/api/auth/register', { email: 'u1@test.com', password: 'Password1' });
   const u2 = await api('POST', '/api/auth/register', { email: 'u2@test.com', password: 'Password1' });
 
   const created = await api('POST', '/api/tasks', { title: 'Study Node.js', priority: 'high' }, u1.data.token);
   assert.equal(created.status, 201);
-  const id = created.data.task.id;
+  assert.equal(created.data.done, false);
 
-  const forbiddenGet = await api('GET', `/api/tasks/${id}`, null, u2.data.token);
-  assert.equal(forbiddenGet.status, 404);
+  const list = await api('GET', '/api/tasks', null, u1.data.token);
+  assert.equal(list.status, 200);
+  assert.equal(list.data.length, 1);
 
-  const updated = await api('PATCH', `/api/tasks/${id}`, { completed: true }, u1.data.token);
-  assert.equal(updated.status, 200);
-  assert.equal(updated.data.task.completed, true);
+  const otherGet = await api('GET', `/api/tasks/${created.data.id}`, null, u2.data.token);
+  assert.equal(otherGet.status, 404);
 
-  const deleted = await api('DELETE', `/api/tasks/${id}`, null, u1.data.token);
+  const patched = await api('PATCH', `/api/tasks/${created.data.id}`, { done: true }, u1.data.token);
+  assert.equal(patched.status, 200);
+  assert.equal(patched.data.done, true);
+
+  const emptyPatch = await api('PATCH', `/api/tasks/${created.data.id}`, { unknown: 1 }, u1.data.token);
+  assert.equal(emptyPatch.status, 400);
+
+  const deleted = await api('DELETE', `/api/tasks/${created.data.id}`, null, u1.data.token);
   assert.equal(deleted.status, 204);
 });

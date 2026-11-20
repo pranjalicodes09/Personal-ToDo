@@ -5,18 +5,18 @@ const db = require('../database/db');
 const requireAuth = require('../middleware/auth');
 
 const router = express.Router();
-const SESSION_MS = 24 * 60 * 60 * 1000;
+const SESSION_SECONDS = 24 * 60 * 60;
 
-function makeSession(userId) {
+function createSession(userId) {
   const token = crypto.randomBytes(32).toString('hex');
   const now = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + SESSION_MS).toISOString();
+  const expiresAt = new Date(Date.now() + SESSION_SECONDS * 1000).toISOString();
 
   db.prepare(
     'INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)'
   ).run(token, userId, expiresAt, now);
 
-  return { token, expiresAt };
+  return { token, expiresIn: SESSION_SECONDS };
 }
 
 router.post('/register', (req, res) => {
@@ -27,13 +27,10 @@ router.post('/register', (req, res) => {
   if (!email || email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.email = 'Valid email is required';
   }
-
   if (typeof password !== 'string' || password.length < 8 || password.length > 128 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    errors.password = 'Password must be 8-128 chars with a letter and a number';
+    errors.password = 'Password must be 8-128 chars with a letter and a digit';
   }
-
-  const trimmedName = typeof name === 'string' ? name.trim() : '';
-  if (name != null && trimmedName.length > 80) {
+  if (name != null && (typeof name !== 'string' || name.trim().length > 80)) {
     errors.name = 'Name must be 80 characters or less';
   }
 
@@ -46,23 +43,23 @@ router.post('/register', (req, res) => {
   }
 
   const hash = bcrypt.hashSync(password, 10);
-  const userName = trimmedName || null;
+  const cleanName = typeof name === 'string' && name.trim() ? name.trim() : null;
   const info = db
     .prepare('INSERT INTO users (email, password_hash, name, created_at) VALUES (?, ?, ?, ?)')
-    .run(email, hash, userName, new Date().toISOString());
+    .run(email, hash, cleanName, new Date().toISOString());
 
-  const user = { id: Number(info.lastInsertRowid), email, name: userName };
-  const session = makeSession(user.id);
+  const user = { id: Number(info.lastInsertRowid), email, name: cleanName };
+  const session = createSession(user.id);
 
-  res.status(201).json({ ...session, user });
+  res.status(201).json({ ...user, ...session, user });
 });
 
 router.post('/login', (req, res) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const password = req.body?.password;
 
-  if (!email || typeof password !== 'string') {
-    return res.status(401).json({ error: 'Invalid email or password' });
+  if (!email || typeof password !== 'string' || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
   }
 
   const user = db.prepare('SELECT id, email, name, password_hash FROM users WHERE email = ?').get(email);
@@ -70,7 +67,7 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
-  const session = makeSession(user.id);
+  const session = createSession(user.id);
   res.json({
     ...session,
     user: { id: user.id, email: user.email, name: user.name }
@@ -83,7 +80,7 @@ router.post('/logout', requireAuth, (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ user: req.user });
+  res.json({ id: req.user.id, email: req.user.email, name: req.user.name });
 });
 
 module.exports = router;
