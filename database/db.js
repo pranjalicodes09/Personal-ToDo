@@ -1,15 +1,12 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 
-// Allow tests to override the database file via env var, otherwise use database/todo.db
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'todo.db');
 const db = new Database(dbPath);
 
-// Enable WAL mode for better performance and enforce foreign key constraints
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
-// Create tables automatically on first run
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

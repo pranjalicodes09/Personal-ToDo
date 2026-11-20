@@ -1,42 +1,30 @@
 const db = require('../database/db');
 
-function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  if (!authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
+module.exports = (req, res, next) => {
+  const header = req.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.split(' ')[1] : null;
 
-  const token = authHeader.slice(7).trim();
   if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const session = db
-    .prepare(
-      `SELECT s.token, s.expires_at, u.id, u.email, u.name
-       FROM sessions s
-       JOIN users u ON u.id = s.user_id
-       WHERE s.token = ?`
-    )
-    .get(token);
+  const row = db.prepare(`
+    SELECT s.expires_at, u.id, u.email, u.name
+    FROM sessions s
+    JOIN users u ON u.id = s.user_id
+    WHERE s.token = ?
+  `).get(token);
 
-  if (!session) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  if (!row) {
+    return res.status(401).json({ error: 'Invalid session' });
   }
 
-  if (new Date(session.expires_at) <= new Date()) {
+  if (Date.parse(row.expires_at) <= Date.now()) {
     db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-    return res.status(401).json({ error: 'Token expired' });
+    return res.status(401).json({ error: 'Session expired' });
   }
 
   req.token = token;
-  req.user = {
-    id: session.id,
-    email: session.email,
-    name: session.name
-  };
-
+  req.user = { id: row.id, email: row.email, name: row.name };
   next();
-}
-
-module.exports = requireAuth;
+};

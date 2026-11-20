@@ -12,24 +12,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 
-// Return JSON 404 for unknown /api routes
 app.use('/api', (req, res) => {
-  res.status(404).json({ error: 'API route not found' });
+  res.status(404).json({ error: 'Not found' });
 });
 
-// Handle malformed JSON bodies cleanly with 400
 app.use((err, req, res, next) => {
-  if (err && err.type === 'entity.parse.failed') {
-    return res.status(400).json({ error: 'Invalid JSON payload' });
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Invalid JSON' });
   }
   console.error(err);
-  return res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Server error' });
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 }
 
 module.exports = app;

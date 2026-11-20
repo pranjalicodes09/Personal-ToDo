@@ -1,325 +1,266 @@
+const $ = (id) => document.getElementById(id);
+
 let token = localStorage.getItem('token') || '';
 let isRegister = false;
 let currentStatus = 'all';
 
-const authSection = document.getElementById('auth-section');
-const appSection = document.getElementById('app-section');
-const userEmail = document.getElementById('user-email');
-const authError = document.getElementById('auth-error');
-const appError = document.getElementById('app-error');
-const taskList = document.getElementById('task-list');
-const emptyMsg = document.getElementById('empty-msg');
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'className') node.className = v;
+    else if (k.startsWith('on')) node.addEventListener(k.slice(2).toLowerCase(), v);
+    else node.setAttribute(k, v);
+  });
+  children.flat().forEach((child) => {
+    if (child != null) {
+      node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    }
+  });
+  return node;
+}
 
-const createPanel = document.getElementById('create-panel');
-const tasksPanel = document.getElementById('tasks-panel');
-const panelTitle = document.getElementById('panel-title');
-
-async function request(url, options = {}) {
+async function api(url, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (token) {
-    headers.Authorization = 'Bearer ' + token;
-  }
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(url, { ...options, headers });
 
   if (res.status === 401 && url !== '/api/auth/login') {
     logoutLocal();
-    throw new Error('Please log in again.');
+    throw new Error('Session expired. Please log in again.');
   }
 
   if (res.status === 204) return null;
 
   const data = await res.json();
   if (!res.ok) {
-    if (data.errors) {
-      throw new Error(Object.values(data.errors).join(', '));
-    }
-    throw new Error(data.error || 'Something went wrong');
+    throw new Error(data.errors ? Object.values(data.errors).join(', ') : (data.error || 'Request failed'));
   }
-
   return data;
+}
+
+function showError(boxId, msg) {
+  const box = $(boxId);
+  box.textContent = msg || '';
+  box.classList.toggle('hidden', !msg);
 }
 
 function logoutLocal() {
   token = '';
   localStorage.removeItem('token');
-  authError.classList.add('hidden');
-  authSection.classList.remove('hidden');
-  appSection.classList.add('hidden');
+  showError('auth-error', '');
+  $('auth-section').classList.remove('hidden');
+  $('app-section').classList.add('hidden');
 
-  const clearInputs = () => {
-    document.getElementById('name').value = '';
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-  };
-  clearInputs();
-  setTimeout(clearInputs, 50);
+  const clear = () => ['name', 'email', 'password'].forEach((id) => ($(id).value = ''));
+  clear();
+  setTimeout(clear, 50);
 }
 
-function switchSidebarView(view) {
+function openView(view) {
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.view === view);
   });
 
-  if (view === 'create') {
-    createPanel.classList.remove('hidden');
-    tasksPanel.classList.add('hidden');
-    return;
-  }
+  const creating = view === 'create';
+  $('create-panel').classList.toggle('hidden', !creating);
+  $('tasks-panel').classList.toggle('hidden', creating);
+  if (creating) return;
 
-  createPanel.classList.add('hidden');
-  tasksPanel.classList.remove('hidden');
   currentStatus = view;
-
-  const titles = { all: 'All Tasks', open: 'Open Tasks', completed: 'Completed Tasks' };
-  panelTitle.textContent = titles[view] || 'All Tasks';
+  const headings = { all: 'All Tasks', open: 'Open Tasks', completed: 'Completed Tasks' };
+  $('panel-title').textContent = headings[view] || 'All Tasks';
   loadTasks();
 }
 
-function showApp(user) {
-  userEmail.textContent = user.name ? `${user.name} (${user.email})` : user.email;
-  authSection.classList.add('hidden');
-  appSection.classList.remove('hidden');
-  switchSidebarView('all');
+function enterApp(user) {
+  $('user-email').textContent = user.name ? `${user.name} (${user.email})` : user.email;
+  $('auth-section').classList.add('hidden');
+  $('app-section').classList.remove('hidden');
+  openView('all');
 }
 
-// Portal Login / Register Tabs
-document.getElementById('show-login').addEventListener('click', () => {
-  isRegister = false;
-  document.getElementById('show-login').classList.add('active');
-  document.getElementById('show-register').classList.remove('active');
-  document.getElementById('name-row').classList.add('hidden');
-  document.getElementById('auth-submit').textContent = 'Login';
-  authError.classList.add('hidden');
-});
+function toggleAuthTab(registerMode) {
+  isRegister = registerMode;
+  $('show-login').classList.toggle('active', !registerMode);
+  $('show-register').classList.toggle('active', registerMode);
+  $('name-row').classList.toggle('hidden', !registerMode);
+  $('auth-submit').textContent = registerMode ? 'Register' : 'Login';
+  showError('auth-error', '');
+}
 
-document.getElementById('show-register').addEventListener('click', () => {
-  isRegister = true;
-  document.getElementById('show-register').classList.add('active');
-  document.getElementById('show-login').classList.remove('active');
-  document.getElementById('name-row').classList.remove('hidden');
-  document.getElementById('auth-submit').textContent = 'Register';
-  authError.classList.add('hidden');
-});
+$('show-login').onclick = () => toggleAuthTab(false);
+$('show-register').onclick = () => toggleAuthTab(true);
 
-// Submit Login / Register
-document.getElementById('auth-form').addEventListener('submit', async (e) => {
+$('auth-form').onsubmit = async (e) => {
   e.preventDefault();
-  authError.classList.add('hidden');
+  showError('auth-error', '');
 
-  const body = {
-    email: document.getElementById('email').value,
-    password: document.getElementById('password').value
-  };
-  if (isRegister) {
-    body.name = document.getElementById('name').value;
-  }
-
-  const url = isRegister ? '/api/auth/register' : '/api/auth/login';
+  const body = { email: $('email').value, password: $('password').value };
+  if (isRegister) body.name = $('name').value;
 
   try {
-    const data = await request(url, {
+    const data = await api(isRegister ? '/api/auth/register' : '/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(body)
     });
     token = data.token;
     localStorage.setItem('token', token);
-    document.getElementById('auth-form').reset();
-    showApp(data.user);
+    $('auth-form').reset();
+    enterApp(data.user);
   } catch (err) {
-    authError.textContent = err.message;
-    authError.classList.remove('hidden');
+    showError('auth-error', err.message);
   }
-});
+};
 
-// Logout
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  try {
-    await request('/api/auth/logout', { method: 'POST' });
-  } catch (e) {}
+$('logout-btn').onclick = async () => {
+  await api('/api/auth/logout', { method: 'POST' }).catch(() => {});
   logoutLocal();
-});
+};
 
-// Left Sidebar Navigation
 document.querySelectorAll('.nav-item').forEach((btn) => {
-  btn.addEventListener('click', () => switchSidebarView(btn.dataset.view));
+  btn.onclick = () => openView(btn.dataset.view);
 });
 
-document.getElementById('quick-add-btn').addEventListener('click', () => {
-  switchSidebarView('create');
-});
+$('quick-add-btn').onclick = () => openView('create');
+$('cancel-create-btn').onclick = () => openView('all');
 
-document.getElementById('cancel-create-btn').addEventListener('click', () => {
-  switchSidebarView('all');
-});
-
-// Create Task
-document.getElementById('task-form').addEventListener('submit', async (e) => {
+$('task-form').onsubmit = async (e) => {
   e.preventDefault();
-  appError.classList.add('hidden');
-
-  const body = {
-    title: document.getElementById('title').value,
-    description: document.getElementById('description').value,
-    priority: document.getElementById('priority').value,
-    dueDate: document.getElementById('due-date').value || null
-  };
+  showError('app-error', '');
 
   try {
-    await request('/api/tasks', {
+    await api('/api/tasks', {
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        title: $('title').value,
+        description: $('description').value,
+        priority: $('priority').value,
+        dueDate: $('due-date').value || null
+      })
     });
-    document.getElementById('task-form').reset();
-    document.getElementById('priority').value = 'medium';
-    switchSidebarView('all');
+    $('task-form').reset();
+    $('priority').value = 'medium';
+    openView('all');
   } catch (err) {
-    appError.textContent = err.message;
-    appError.classList.remove('hidden');
+    showError('app-error', err.message);
   }
-});
+};
 
-// Search, Priority Filter, and Sort
-document.getElementById('search').addEventListener('input', loadTasks);
-document.getElementById('filter-priority').addEventListener('change', loadTasks);
-document.getElementById('sort-by').addEventListener('change', loadTasks);
+$('search').oninput = loadTasks;
+$('filter-priority').onchange = loadTasks;
+$('sort-by').onchange = loadTasks;
 
 async function loadTasks() {
-  appError.classList.add('hidden');
-
-  const q = document.getElementById('search').value.trim();
-  const priority = document.getElementById('filter-priority').value;
-  const [sort, order] = document.getElementById('sort-by').value.split(':');
-
+  showError('app-error', '');
+  const [sort, order] = $('sort-by').value.split(':');
   const params = new URLSearchParams({ status: currentStatus, sort, order });
+
+  const q = $('search').value.trim();
+  const priority = $('filter-priority').value;
   if (q) params.set('q', q);
   if (priority) params.set('priority', priority);
 
   try {
-    const data = await request('/api/tasks?' + params.toString());
-    renderTasks(data.tasks);
+    const { tasks } = await api(`/api/tasks?${params}`);
+    renderTasks(tasks);
   } catch (err) {
-    appError.textContent = err.message;
-    appError.classList.remove('hidden');
+    showError('app-error', err.message);
   }
 }
 
 function renderTasks(tasks) {
-  taskList.textContent = '';
-  emptyMsg.classList.toggle('hidden', tasks.length > 0);
+  const list = $('task-list');
+  list.textContent = '';
+  $('empty-msg').classList.toggle('hidden', tasks.length > 0);
 
   const today = new Date().toISOString().slice(0, 10);
 
   tasks.forEach((task) => {
-    const isOverdue = !task.completed && task.dueDate && task.dueDate < today;
+    const overdue = !task.completed && task.dueDate && task.dueDate < today;
 
-    const li = document.createElement('li');
-    li.className = 'task-item';
-    if (task.completed) li.classList.add('done');
-    if (isOverdue) li.classList.add('overdue');
-
-    const top = document.createElement('div');
-    top.className = 'task-top';
-
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = task.completed;
-    checkbox.ariaLabel = 'Toggle completed';
-    checkbox.addEventListener('change', async () => {
-      await request('/api/tasks/' + task.id, {
-        method: 'PATCH',
-        body: JSON.stringify({ completed: !task.completed })
-      });
-      loadTasks();
-    });
-
-    const info = document.createElement('div');
-    info.className = 'task-info';
-
-    const title = document.createElement('p');
-    title.className = 'task-title';
-    title.textContent = task.title;
-    info.appendChild(title);
-
-    if (task.description) {
-      const desc = document.createElement('p');
-      desc.className = 'task-desc';
-      desc.textContent = task.description;
-      info.appendChild(desc);
-    }
-
-    const meta = document.createElement('div');
-    meta.className = 'task-meta';
-    meta.textContent = `Priority: ${task.priority}` + (task.dueDate ? ` | Due: ${task.dueDate}` : '');
-
-    if (isOverdue) {
-      const tag = document.createElement('span');
-      tag.className = 'overdue-tag';
-      tag.textContent = ' (OVERDUE)';
-      meta.appendChild(tag);
-    }
-
-    info.appendChild(meta);
-    top.appendChild(checkbox);
-    top.appendChild(info);
-
-    const buttons = document.createElement('div');
-    buttons.className = 'task-buttons';
-
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'pill-btn';
-    editBtn.textContent = 'Edit';
-    editBtn.addEventListener('click', async () => {
-      const newTitle = window.prompt('Edit title:', task.title);
-      if (newTitle === null) return;
-      const newDesc = prompt('Edit description:', task.description);
-      if (newDesc === null) return;
-      const newDue = prompt('Edit due date (YYYY-MM-DD or leave blank):', task.dueDate || '');
-      if (newDue === null) return;
-
-      try {
-        await request('/api/tasks/' + task.id, {
+    const checkbox = el('input', {
+      type: 'checkbox',
+      'aria-label': 'Toggle completed',
+      onChange: async () => {
+        await api(`/api/tasks/${task.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({
-            title: newTitle,
-            description: newDesc,
-            dueDate: newDue.trim() || null
-          })
+          body: JSON.stringify({ completed: !task.completed })
         });
         loadTasks();
-      } catch (err) {
-        appError.textContent = err.message;
-        appError.classList.remove('hidden');
       }
     });
+    checkbox.checked = task.completed;
 
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'danger';
-    delBtn.textContent = 'Delete';
-    delBtn.addEventListener('click', async () => {
-      if (!confirm('Delete this task?')) return;
-      await request('/api/tasks/' + task.id, { method: 'DELETE' });
-      loadTasks();
-    });
+    const meta = el(
+      'div',
+      { className: 'task-meta' },
+      `Priority: ${task.priority}${task.dueDate ? ` | Due: ${task.dueDate}` : ''}`,
+      overdue ? el('span', { className: 'overdue-tag' }, ' (OVERDUE)') : null
+    );
 
-    buttons.appendChild(editBtn);
-    buttons.appendChild(delBtn);
+    const item = el(
+      'li',
+      { className: `task-item${task.completed ? ' done' : ''}${overdue ? ' overdue' : ''}` },
+      el(
+        'div',
+        { className: 'task-top' },
+        checkbox,
+        el(
+          'div',
+          { className: 'task-info' },
+          el('p', { className: 'task-title' }, task.title),
+          task.description ? el('p', { className: 'task-desc' }, task.description) : null,
+          meta
+        )
+      ),
+      el(
+        'div',
+        { className: 'task-buttons' },
+        el('button', { type: 'button', className: 'pill-btn', onClick: () => editTask(task) }, 'Edit'),
+        el('button', { type: 'button', className: 'danger', onClick: () => deleteTask(task.id) }, 'Delete')
+      )
+    );
 
-    li.appendChild(top);
-    li.appendChild(buttons);
-    taskList.appendChild(li);
+    list.appendChild(item);
   });
 }
 
-// Check existing session on page load
+async function editTask(task) {
+  const title = prompt('Edit title:', task.title);
+  if (title === null) return;
+  const description = prompt('Edit description:', task.description);
+  if (description === null) return;
+  const dueDate = prompt('Edit due date (YYYY-MM-DD or leave blank):', task.dueDate || '');
+  if (dueDate === null) return;
+
+  try {
+    await api(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title, description, dueDate: dueDate.trim() || null })
+    });
+    loadTasks();
+  } catch (err) {
+    showError('app-error', err.message);
+  }
+}
+
+async function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  try {
+    await api(`/api/tasks/${id}`, { method: 'DELETE' });
+    loadTasks();
+  } catch (err) {
+    showError('app-error', err.message);
+  }
+}
+
 (async () => {
   if (!token) return;
   try {
-    const data = await request('/api/auth/me');
-    showApp(data.user);
-  } catch (e) {
+    const { user } = await api('/api/auth/me');
+    enterApp(user);
+  } catch {
     logoutLocal();
   }
 })();

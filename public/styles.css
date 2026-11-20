@@ -4,69 +4,59 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #111827;
-  /* Subtle aesthetic dot-grid & soft ambient illustration pattern */
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(203, 213, 225, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(100, 116, 139, 0.12) 0%, transparent 45%),
-    radial-gradient(rgba(203, 213, 225, 0.12) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 24px 24px;
+  font-family: 'Inter', Arial, sans-serif;
+  background: #111827;
   color: #F8FAFC;
   line-height: 1.5;
-  min-height: 100vh;
 }
 
 h1,
 h2,
 .sidebar-brand,
 .task-title {
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   color: #F8FAFC;
-  letter-spacing: -0.02em;
 }
 
 .hidden {
   display: none !important;
 }
 
-/* ================= PORTAL (LOGIN / REGISTER) ================= */
+/* Login & Register Portal */
 .portal-wrapper {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 20px;
 }
 
 .portal-card {
   width: 100%;
-  max-width: 440px;
+  max-width: 420px;
   background: #1F2937;
   border: 1px solid #CBD5E1;
-  border-radius: 20px;
-  padding: 32px 26px;
+  border-radius: 18px;
+  padding: 28px 24px;
   text-align: center;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 
 .portal-logo {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .portal-heading {
   margin: 0 0 6px;
-  font-size: 32px;
-  font-weight: 700;
-  color: #F8FAFC;
+  font-size: 30px;
 }
 
-.portal-subtitle {
-  margin: 0 0 22px;
-  font-size: 14px;
+.portal-subtitle,
+.hint,
+.optional,
+.user-email {
   color: #64748B;
+  font-size: 14px;
+  margin-top: 0;
 }
 
 .portal-card form {
@@ -76,12 +66,12 @@ h2,
 /* Round Pill Tabs & Buttons */
 .pill-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   background: #111827;
-  padding: 5px;
+  padding: 4px;
   border: 1px solid #CBD5E1;
   border-radius: 999px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .pill-tabs .pill-btn {
@@ -100,51 +90,34 @@ h2,
 .pill-primary,
 .danger {
   min-height: 44px;
-  padding: 10px 20px;
-  font-family: 'Inter', system-ui, sans-serif;
+  padding: 10px 18px;
   font-size: 14px;
   font-weight: 600;
   border-radius: 999px;
+  border: 1px solid #CBD5E1;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
 }
 
 .pill-btn {
   background: #111827;
   color: #F8FAFC;
-  border: 1px solid #CBD5E1;
-}
-
-.pill-btn:hover {
-  background: #1F2937;
 }
 
 .pill-primary {
   background: #F8FAFC;
   color: #111827;
-  border: 1px solid #CBD5E1;
-}
-
-.pill-primary:hover {
-  background: #CBD5E1;
 }
 
 .danger {
   background: #111827;
   color: #FCA5A5;
-  border: 1px solid #CBD5E1;
-}
-
-.danger:hover {
-  background: #7F1D1D;
-  color: #F8FAFC;
 }
 
 .full-width {
   width: 100%;
 }
 
-/* ================= WORKSPACE & LEFT SIDEBAR ================= */
+/* Left Sidebar & Main Area */
 .workspace {
   display: flex;
   flex-direction: column;
@@ -157,16 +130,15 @@ h2,
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
-  color: #F8FAFC;
 }
 
 .sidebar-nav {
@@ -182,16 +154,10 @@ h2,
   border: 1px solid transparent;
   background: transparent;
   color: #64748B;
-  font-family: 'Inter', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-}
-
-.nav-item:hover {
-  color: #F8FAFC;
-  background: #111827;
 }
 
 .nav-item.active {
@@ -203,98 +169,78 @@ h2,
 .sidebar-footer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding-top: 12px;
   border-top: 1px solid #CBD5E1;
 }
 
-.user-email {
-  font-size: 13px;
-  color: #64748B;
-  word-break: break-all;
-}
-
 .main-panel {
   flex: 1;
-  max-width: 860px;
+  max-width: 820px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 20px 16px;
 }
 
 .panel-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .panel-top h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
 }
 
-/* Cards & Forms */
+/* Boxes & Inputs */
 .box {
   background: #1F2937;
   border: 1px solid #CBD5E1;
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 18px;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
 }
 
 .box-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   padding-bottom: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   border-bottom: 1px solid #CBD5E1;
 }
 
 .box-header h2 {
   margin: 0;
-  font-size: 20px;
-}
-
-.hint,
-.optional {
-  color: #64748B;
-  font-size: 13px;
-  font-weight: 400;
+  font-size: 18px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   flex: 1;
 }
 
 label {
-  font-weight: 500;
   font-size: 14px;
   color: #64748B;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 input,
 select,
 textarea {
   min-height: 44px;
-  padding: 10px 14px;
-  font-family: 'Inter', system-ui, sans-serif;
+  padding: 10px 12px;
+  font-family: inherit;
   font-size: 15px;
   color: #F8FAFC;
   background: #111827;
   border: 1px solid #CBD5E1;
-  border-radius: 10px;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #64748B;
+  border-radius: 8px;
 }
 
 button:focus-visible,
@@ -305,26 +251,25 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.form-buttons {
+.row,
+.form-buttons,
+.task-buttons {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.row {
+  flex-direction: column;
 }
 
 .error {
   background: #450A0A;
   color: #F8FAFC;
   border: 1px solid #CBD5E1;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
   font-size: 14px;
-  margin-bottom: 14px;
 }
 
 .empty {
@@ -332,37 +277,32 @@ textarea:focus-visible {
   color: #64748B;
   background: #1F2937;
   border: 1px dashed #CBD5E1;
-  border-radius: 14px;
-  padding: 36px 16px;
-  font-size: 15px;
+  border-radius: 12px;
+  padding: 28px 16px;
 }
 
-/* Task List */
+/* Task Cards */
 .task-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .task-item {
   background: #1F2937;
   border: 1px solid #CBD5E1;
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .task-item.overdue {
   border-left: 4px solid #EF4444;
-}
-
-.task-item.done {
-  opacity: 0.72;
 }
 
 .task-item.done .task-title {
@@ -373,39 +313,27 @@ textarea:focus-visible {
 .task-top {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 }
 
 .task-top input[type="checkbox"] {
   width: 22px;
   height: 22px;
   min-height: 22px;
-  margin-top: 2px;
-  accent-color: #F8FAFC;
-  cursor: pointer;
-}
-
-.task-info {
-  flex: 1;
+  margin-top: 3px;
 }
 
 .task-title {
   font-weight: 600;
   font-size: 16px;
-  color: #F8FAFC;
   margin: 0 0 4px;
 }
 
-.task-desc {
-  margin: 0 0 8px;
+.task-desc,
+.task-meta {
+  margin: 0 0 4px;
   color: #64748B;
   font-size: 14px;
-}
-
-.task-meta {
-  font-size: 13px;
-  color: #64748B;
-  font-weight: 500;
 }
 
 .overdue-tag {
@@ -413,20 +341,13 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
-.task-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-/* Desktop Sidebar Layout */
 @media (min-width: 760px) {
   .workspace {
     flex-direction: row;
   }
 
   .sidebar {
-    width: 250px;
-    flex-shrink: 0;
+    width: 240px;
     border-bottom: none;
     border-right: 1px solid #CBD5E1;
     padding: 24px 16px;
@@ -436,15 +357,6 @@ textarea:focus-visible {
   .sidebar-nav {
     flex-direction: column;
     flex: 1;
-    margin-top: 12px;
-  }
-
-  .nav-item {
-    border-radius: 10px;
-  }
-
-  .main-panel {
-    padding: 32px 28px;
   }
 
   .row {

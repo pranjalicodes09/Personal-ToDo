@@ -3,273 +3,170 @@ const db = require('../database/db');
 const requireAuth = require('../middleware/auth');
 
 const router = express.Router();
-const VALID_PRIORITIES = ['low', 'medium', 'high'];
+const PRIORITIES = ['low', 'medium', 'high'];
 
-function formatTask(row) {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    completed: Boolean(row.completed),
-    priority: row.priority,
-    dueDate: row.due_date,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
+const toTask = (row) => ({
+  id: row.id,
+  title: row.title,
+  description: row.description,
+  completed: Boolean(row.completed),
+  priority: row.priority,
+  dueDate: row.due_date,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
+function isValidDate(str) {
+  if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const [y, m, d] = str.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
-function isValidCalendarDate(dateStr) {
-  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return false;
+function validateFields(body, isPatch = false) {
+  const errors = {};
+  const data = {};
+
+  if (!isPatch || body.title !== undefined) {
+    if (typeof body.title !== 'string' || !body.title.trim() || body.title.trim().length > 140) {
+      errors.title = 'Title must be 1-140 characters';
+    } else {
+      data.title = body.title.trim();
+    }
   }
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return (
-    parsed.getUTCFullYear() === year &&
-    parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day
-  );
-}
 
-function parsePositiveId(rawId) {
-  if (!/^\d+$/.test(String(rawId))) return null;
-  const num = Number(rawId);
-  return Number.isSafeInteger(num) && num > 0 ? num : null;
+  if (body.description !== undefined) {
+    if (body.description !== null && (typeof body.description !== 'string' || body.description.length > 2000)) {
+      errors.description = 'Description must be 2000 characters or less';
+    } else {
+      data.description = body.description || '';
+    }
+  } else if (!isPatch) {
+    data.description = '';
+  }
+
+  if (!isPatch || body.priority !== undefined) {
+    const val = body.priority ?? 'medium';
+    if (!PRIORITIES.includes(val)) {
+      errors.priority = 'Priority must be low, medium, or high';
+    } else {
+      data.priority = val;
+    }
+  }
+
+  if (body.dueDate !== undefined) {
+    if (body.dueDate === null || body.dueDate === '') {
+      data.due_date = null;
+    } else if (!isValidDate(body.dueDate)) {
+      errors.dueDate = 'dueDate must be YYYY-MM-DD or null';
+    } else {
+      data.due_date = body.dueDate;
+    }
+  } else if (!isPatch) {
+    data.due_date = null;
+  }
+
+  if (isPatch && body.completed !== undefined) {
+    if (typeof body.completed !== 'boolean') {
+      errors.completed = 'Completed must be a boolean';
+    } else {
+      data.completed = body.completed ? 1 : 0;
+    }
+  }
+
+  return { errors, data };
 }
 
 router.use(requireAuth);
 
-// GET /api/tasks
+router.param('id', (req, res, next, rawId) => {
+  if (!/^\d+$/.test(rawId)) return res.status(404).json({ error: 'Task not found' });
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').get(Number(rawId), req.user.id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  req.task = task;
+  next();
+});
+
 router.get('/', (req, res) => {
   const { status = 'all', priority, q, sort = 'createdAt', order = 'desc' } = req.query;
 
   if (!['all', 'open', 'completed'].includes(status)) {
-    return res.status(400).json({ errors: { status: 'Status must be all, open, or completed' } });
+    return res.status(400).json({ errors: { status: 'Invalid status' } });
   }
-
-  if (priority !== undefined && !VALID_PRIORITIES.includes(priority)) {
-    return res.status(400).json({ errors: { priority: 'Priority must be low, medium, or high' } });
+  if (priority && !PRIORITIES.includes(priority)) {
+    return res.status(400).json({ errors: { priority: 'Invalid priority' } });
   }
-
   if (!['createdAt', 'dueDate', 'priority'].includes(sort)) {
-    return res.status(400).json({ errors: { sort: 'Sort must be createdAt, dueDate, or priority' } });
+    return res.status(400).json({ errors: { sort: 'Invalid sort field' } });
   }
-
   if (!['asc', 'desc'].includes(order)) {
-    return res.status(400).json({ errors: { order: 'Order must be asc or desc' } });
+    return res.status(400).json({ errors: { order: 'Invalid order' } });
   }
 
-  const conditions = ['user_id = ?'];
+  const where = ['user_id = ?'];
   const params = [req.user.id];
 
-  if (status === 'open') {
-    conditions.push('completed = 0');
-  } else if (status === 'completed') {
-    conditions.push('completed = 1');
-  }
-
+  if (status === 'open') where.push('completed = 0');
+  if (status === 'completed') where.push('completed = 1');
   if (priority) {
-    conditions.push('priority = ?');
+    where.push('priority = ?');
     params.push(priority);
   }
-
-  if (typeof q === 'string' && q.trim() !== '') {
-    conditions.push('(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)');
-    const pattern = `%${q.trim().toLowerCase()}%`;
-    params.push(pattern, pattern);
+  if (q?.trim()) {
+    where.push('(LOWER(title) LIKE ? OR LOWER(description) LIKE ?)');
+    const term = `%${q.trim().toLowerCase()}%`;
+    params.push(term, term);
   }
 
   const dir = order.toUpperCase();
-  let orderByClause = `created_at ${dir}, id ${dir}`;
+  const orderMap = {
+    createdAt: `created_at ${dir}, id ${dir}`,
+    dueDate: order === 'asc'
+      ? 'CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, id ASC'
+      : 'CASE WHEN due_date IS NULL THEN 0 ELSE 1 END, due_date DESC, id DESC',
+    priority: `CASE priority WHEN 'low' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END ${dir}, id ${dir}`
+  };
 
-  if (sort === 'dueDate') {
-    // Null due dates appear last when sorting asc, first when sorting desc
-    orderByClause =
-      order === 'asc'
-        ? 'CASE WHEN due_date IS NULL THEN 1 ELSE 0 END ASC, due_date ASC, id ASC'
-        : 'CASE WHEN due_date IS NULL THEN 0 ELSE 1 END ASC, due_date DESC, id DESC';
-  } else if (sort === 'priority') {
-    orderByClause = `CASE priority WHEN 'low' THEN 1 WHEN 'medium' THEN 2 WHEN 'high' THEN 3 END ${dir}, id ${dir}`;
-  }
-
-  const rows = db
-    .prepare(`SELECT * FROM tasks WHERE ${conditions.join(' AND ')} ORDER BY ${orderByClause}`)
-    .all(...params);
-
-  return res.status(200).json({
-    tasks: rows.map(formatTask)
-  });
+  const rows = db.prepare(`SELECT * FROM tasks WHERE ${where.join(' AND ')} ORDER BY ${orderMap[sort]}`).all(...params);
+  res.json({ tasks: rows.map(toTask) });
 });
 
-// POST /api/tasks
 router.post('/', (req, res) => {
-  const { title, description = '', priority = 'medium', dueDate = null } = req.body || {};
-  const errors = {};
-
-  if (typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 140) {
-    errors.title = 'Title is required and must be 1-140 characters';
-  }
-
-  if (description !== undefined && description !== null) {
-    if (typeof description !== 'string' || description.length > 2000) {
-      errors.description = 'Description must be 2000 characters or fewer';
-    }
-  }
-
-  if (!VALID_PRIORITIES.includes(priority)) {
-    errors.priority = 'Priority must be low, medium, or high';
-  }
-
-  if (dueDate !== null && dueDate !== '') {
-    if (!isValidCalendarDate(dueDate)) {
-      errors.dueDate = 'dueDate must be a valid YYYY-MM-DD date or null';
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return res.status(400).json({ errors });
-  }
+  const { errors, data } = validateFields(req.body || {}, false);
+  if (Object.keys(errors).length) return res.status(400).json({ errors });
 
   const now = new Date().toISOString();
-  const cleanTitle = title.trim();
-  const cleanDescription = description || '';
-  const cleanDueDate = dueDate === '' ? null : dueDate;
+  const info = db.prepare(`
+    INSERT INTO tasks (user_id, title, description, completed, priority, due_date, created_at, updated_at)
+    VALUES (?, ?, ?, 0, ?, ?, ?, ?)
+  `).run(req.user.id, data.title, data.description, data.priority, data.due_date, now, now);
 
-  const result = db
-    .prepare(
-      `INSERT INTO tasks (user_id, title, description, completed, priority, due_date, created_at, updated_at)
-       VALUES (?, ?, ?, 0, ?, ?, ?, ?)`
-    )
-    .run(req.user.id, cleanTitle, cleanDescription, priority, cleanDueDate, now, now);
-
-  const created = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
-  return res.status(201).json({ task: formatTask(created) });
+  const created = db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid);
+  res.status(201).json({ task: toTask(created) });
 });
 
-// GET /api/tasks/:id
 router.get('/:id', (req, res) => {
-  const taskId = parsePositiveId(req.params.id);
-  if (!taskId) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-
-  const row = db
-    .prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?')
-    .get(taskId, req.user.id);
-
-  if (!row) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-
-  return res.status(200).json({ task: formatTask(row) });
+  res.json({ task: toTask(req.task) });
 });
 
-// PATCH /api/tasks/:id
 router.patch('/:id', (req, res) => {
-  const taskId = parsePositiveId(req.params.id);
-  if (!taskId) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
+  const { errors, data } = validateFields(req.body || {}, true);
+  if (Object.keys(errors).length) return res.status(400).json({ errors });
 
-  const existing = db
-    .prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?')
-    .get(taskId, req.user.id);
+  const next = { ...req.task, ...data, updated_at: new Date().toISOString() };
+  db.prepare(`
+    UPDATE tasks
+    SET title = ?, description = ?, completed = ?, priority = ?, due_date = ?, updated_at = ?
+    WHERE id = ? AND user_id = ?
+  `).run(next.title, next.description, next.completed, next.priority, next.due_date, next.updated_at, req.task.id, req.user.id);
 
-  if (!existing) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-
-  const { title, description, completed, priority, dueDate } = req.body || {};
-  const errors = {};
-
-  let nextTitle = existing.title;
-  if (title !== undefined) {
-    if (typeof title !== 'string' || title.trim().length < 1 || title.trim().length > 140) {
-      errors.title = 'Title must be 1-140 characters';
-    } else {
-      nextTitle = title.trim();
-    }
-  }
-
-  let nextDescription = existing.description;
-  if (description !== undefined) {
-    if (typeof description !== 'string' || description.length > 2000) {
-      errors.description = 'Description must be 2000 characters or fewer';
-    } else {
-      nextDescription = description;
-    }
-  }
-
-  let nextCompleted = existing.completed;
-  if (completed !== undefined) {
-    if (typeof completed !== 'boolean') {
-      errors.completed = 'Completed must be a boolean';
-    } else {
-      nextCompleted = completed ? 1 : 0;
-    }
-  }
-
-  let nextPriority = existing.priority;
-  if (priority !== undefined) {
-    if (!VALID_PRIORITIES.includes(priority)) {
-      errors.priority = 'Priority must be low, medium, or high';
-    } else {
-      nextPriority = priority;
-    }
-  }
-
-  let nextDueDate = existing.due_date;
-  if (dueDate !== undefined) {
-    if (dueDate === null || dueDate === '') {
-      nextDueDate = null;
-    } else if (!isValidCalendarDate(dueDate)) {
-      errors.dueDate = 'dueDate must be a valid YYYY-MM-DD date or null';
-    } else {
-      nextDueDate = dueDate;
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return res.status(400).json({ errors });
-  }
-
-  const updatedAt = new Date().toISOString();
-
-  db.prepare(
-    `UPDATE tasks
-     SET title = ?, description = ?, completed = ?, priority = ?, due_date = ?, updated_at = ?
-     WHERE id = ? AND user_id = ?`
-  ).run(
-    nextTitle,
-    nextDescription,
-    nextCompleted,
-    nextPriority,
-    nextDueDate,
-    updatedAt,
-    taskId,
-    req.user.id
-  );
-
-  const updated = db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
-  return res.status(200).json({ task: formatTask(updated) });
+  const updated = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.task.id);
+  res.json({ task: toTask(updated) });
 });
 
-// DELETE /api/tasks/:id
 router.delete('/:id', (req, res) => {
-  const taskId = parsePositiveId(req.params.id);
-  if (!taskId) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-
-  const result = db
-    .prepare('DELETE FROM tasks WHERE id = ? AND user_id = ?')
-    .run(taskId, req.user.id);
-
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'Task not found' });
-  }
-
-  return res.status(204).send();
+  db.prepare('DELETE FROM tasks WHERE id = ? AND user_id = ?').run(req.task.id, req.user.id);
+  res.status(204).send();
 });
 
 module.exports = router;

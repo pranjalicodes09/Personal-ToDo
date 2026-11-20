@@ -4,21 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Personal Planner</title>
-  <link rel="preconnect" href="https://googleapis.com" />
-  <link rel="preconnect" href="https://gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Portal View (Logged Out) -->
   <main id="auth-section" class="portal-wrapper">
     <div class="portal-card">
-      <!-- Aesthetic Minimalist Planner Logo SVG -->
       <div class="portal-logo" aria-hidden="true">
-        <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+        <svg width="52" height="52" viewBox="0 0 56 56" fill="none">
           <rect x="4" y="4" width="48" height="48" rx="16" fill="#111827" stroke="#CBD5E1" stroke-width="1.5" />
           <path d="M19 20H37M19 28H31M19 36H26" stroke="#CBD5E1" stroke-width="2.2" stroke-linecap="round" />
           <circle cx="36" cy="35" r="5" fill="#F8FAFC" />
@@ -27,7 +25,7 @@
       </div>
 
       <h1 class="portal-heading">Personal Planner</h1>
-      <p class="portal-subtitle">Organize your day with clarity and focus.</p>
+      <p class="portal-subtitle">Keep track of your daily tasks in one place.</p>
 
       <div class="pill-tabs">
         <button id="show-login" type="button" class="pill-btn active">Login</button>
@@ -39,7 +37,7 @@
       <form id="auth-form" autocomplete="off">
         <div id="name-row" class="field hidden">
           <label for="name">Name <span class="optional">(optional)</span></label>
-          <input id="name" type="text" maxlength="80" autocomplete="off" placeholder="Alex Rivera" />
+          <input id="name" type="text" maxlength="80" autocomplete="off" placeholder="Your name" />
         </div>
 
         <div class="field">
@@ -54,7 +52,7 @@
             type="password"
             autocomplete="new-password"
             required
-            placeholder="Min 8 chars, 1 letter & 1 number"
+            placeholder="8+ chars, 1 letter & 1 number"
           />
         </div>
 
@@ -63,11 +61,10 @@
     </div>
   </main>
 
-  <!-- Workspace View (Logged In with Left Sidebar) -->
   <div id="app-section" class="workspace hidden">
-    <aside class="sidebar" aria-label="Planner navigation">
+    <aside class="sidebar">
       <div class="sidebar-brand">
-        <svg width="32" height="32" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 56 56" fill="none" aria-hidden="true">
           <rect x="4" y="4" width="48" height="48" rx="14" fill="#111827" stroke="#CBD5E1" stroke-width="2" />
           <path d="M19 20H37M19 28H31M19 36H26" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round" />
           <circle cx="36" cy="35" r="5" fill="#F8FAFC" />
@@ -76,18 +73,10 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button type="button" class="nav-item active" data-view="all">
-          <span>All Tasks</span>
-        </button>
-        <button type="button" class="nav-item" data-view="open">
-          <span>Open Tasks</span>
-        </button>
-        <button type="button" class="nav-item" data-view="completed">
-          <span>Completed</span>
-        </button>
-        <button type="button" class="nav-item" data-view="create">
-          <span>+ Create Task</span>
-        </button>
+        <button type="button" class="nav-item active" data-view="all">All Tasks</button>
+        <button type="button" class="nav-item" data-view="open">Open Tasks</button>
+        <button type="button" class="nav-item" data-view="completed">Completed</button>
+        <button type="button" class="nav-item" data-view="create">+ Create Task</button>
       </nav>
 
       <div class="sidebar-footer">
@@ -99,22 +88,21 @@
     <main class="main-panel">
       <p id="app-error" class="error hidden"></p>
 
-      <!-- Create Task Page -->
       <section id="create-panel" class="box hidden">
         <div class="box-header">
           <h2>Create New Task</h2>
-          <span class="hint">Add a task to your planner</span>
+          <span class="hint">Add a task</span>
         </div>
 
         <form id="task-form">
           <div class="field">
             <label for="title">Title</label>
-            <input id="title" type="text" maxlength="140" required placeholder="e.g., Prepare project presentation" />
+            <input id="title" type="text" maxlength="140" required placeholder="Task title" />
           </div>
 
           <div class="field">
             <label for="description">Description <span class="optional">(optional)</span></label>
-            <textarea id="description" rows="3" maxlength="2000" placeholder="Add details or notes..."></textarea>
+            <textarea id="description" rows="3" maxlength="2000" placeholder="Notes or details"></textarea>
           </div>
 
           <div class="row">
@@ -135,12 +123,11 @@
 
           <div class="form-buttons">
             <button type="submit" class="pill-primary">Save Task</button>
-            <button type="button" id="cancel-create-btn" class="pill-btn">Back to Tasks</button>
+            <button type="button" id="cancel-create-btn" class="pill-btn">Back</button>
           </div>
         </form>
       </section>
 
-      <!-- View / Filter / Edit / Delete Tasks Page -->
       <section id="tasks-panel">
         <div class="panel-top">
           <h2 id="panel-title">All Tasks</h2>
@@ -149,7 +136,7 @@
 
         <div class="box filters">
           <div class="row">
-            <input id="search" type="search" placeholder="Search title or notes..." aria-label="Search tasks" />
+            <input id="search" type="search" placeholder="Search tasks..." aria-label="Search tasks" />
             <select id="filter-priority" aria-label="Filter by priority">
               <option value="">All Priorities</option>
               <option value="high">High</option>
@@ -167,7 +154,7 @@
           </div>
         </div>
 
-        <p id="empty-msg" class="empty hidden">No tasks here yet. Click "+ Create Task" to add one.</p>
+        <p id="empty-msg" class="empty hidden">No tasks found.</p>
         <ul id="task-list" class="task-list"></ul>
       </section>
     </main>
