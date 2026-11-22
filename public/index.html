@@ -129,9 +129,25 @@
       </section>
 
       <section id="tasks-panel">
-        <div class="panel-top">
+               <div class="panel-top">
           <h2 id="panel-title">All Tasks</h2>
           <button type="button" id="quick-add-btn" class="pill-primary">+ New Task</button>
+        </div>
+
+        <!--SUMMARY BAR-->
+        <div id="summary-bar" class="summary-bar">
+          <div class="summary-card">
+            <span class="summary-label">Open</span>
+            <strong id="count-open" class="summary-value">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Overdue</span>
+            <strong id="count-overdue" class="summary-value overdue-text">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Completed</span>
+            <strong id="count-done" class="summary-value">0</strong>
+          </div>
         </div>
 
         <div class="box filters">
