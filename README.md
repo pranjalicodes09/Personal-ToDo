@@ -1,44 +1,51 @@
 # Personal Planner (Track C — Problem C2)
 
-**Live App:** https://personal-todo-jh96.onrender.com/  
-*(Note: Hosted on Render's free tier; the first visit after inactivity may take ~30–50 seconds to wake up, and the local SQLite file resets on service redeploy.)*
+**Live Demo:** [Personal Planner on Render](https://onrender.com) *(Note: Free tier may take 30–50s to wake up; SQLite resets on redeploy).*
 
-## About the Project
+---
 
-Personal Planner is a multi-user personal task tracker built for Track C (Problem C2). It provides a RESTful JSON API with token-based authentication and a phone-first single-page web interface where each user can securely create, organize, and track only their own tasks.
+## ✨ Overview
+A multi-user task tracker built with **Node.js, Express, SQLite, and Vanilla JavaScript**. Offers private workspaces with full CRUD operations, live status metrics, search/filtering, and rock-solid security.
 
-- **Multi-User Authentication:** Supports user registration, login, current-user lookup, and single-session logout using salted `bcryptjs` password hashes and expiring Bearer tokens.
-- **Private Task Management:** Each user has isolated access to create, list, view, partially update (`PATCH`), and delete tasks with title, description, priority (`low`, `medium`, `high`), due date (`YYYY-MM-DD`), and completion status.
-- **Filtering, Search & Sorting:** Supports filtering by status (`all`, `open`, `done`) and priority, case-insensitive search (`q`) across title and description, and sorting by `createdAt`, `dueDate` (with `null` due dates placed last on ascending sort), and `priority`.
-- **Phone-First Responsive UI:** Built with semantic HTML5, CSS3, and vanilla JavaScript (`360px` to `1280px` screens, `44px+` touch targets, overdue task highlighting, and XSS-safe DOM rendering).
+## 🚀 Key Features
+* **Auth & Security:** Registration, login, profile view (`/me`), logout, password changing, `bcryptjs` hashing (10 salt rounds), and 24-hour Bearer token sessions.
+* **Task Management:** Create, edit, toggle completion, and delete tasks with priority (`low`, `medium`, `high`) and due dates. Strictly scoped to each owner.
+* **Task Summary Bar:** Live dashboard counters tracking **Open**, **Overdue**, and **Completed** tasks.
+* **Search, Filter & Sort:** Filter by status or priority, keyword search, and sorting by date or priority.
+* **Responsive UI:** Mobile-first design (360px–1280px), large touch targets, and XSS-safe `textContent` rendering.
 
-## Application Flow
+## 🛠️ Tech Stack
+* **Backend:** Node.js, Express
+* **Database:** SQLite (`better-sqlite3`)
+* **Auth:** `bcryptjs`, 256-bit crypto tokens
+* **Frontend:** Semantic HTML5, CSS3, Vanilla JS
 
-1. **Session Check & Auth Portal (`/`):** On load, the frontend reads `localStorage` for an existing token and calls `GET /api/auth/me`. Visitors without a valid token see the Login / Register portal.
-2. **Registration & Login (`/api/auth/register`, `/api/auth/login`):** Validates email format (`x@y.z`, max 120 chars, stored lowercase) and password strength (`8–128` chars with at least one letter and one digit). Passwords are hashed with `bcryptjs` (`10` salt rounds), and login issues a random 256-bit hex token stored in the SQLite `sessions` table.
-3. **Bearer Token Verification (`middleware/auth.js`):** Every `/api/tasks` request must send `Authorization: Bearer <token>`. The middleware checks that the token exists in `sessions` and has not expired, attaching `req.user` to the request (or returning `401` so the client redirects back to Login).
-4. **Task CRUD & Ownership Isolation (`/api/tasks`):** Every database query scopes operations to `user_id = req.user.id`. Requesting, updating, or deleting another user's task ID returns `404 Not Found` so task existence is never disclosed.
-5. **Logout (`/api/auth/logout`):** Deletes only the active token row from `sessions` (`204 No Content`), leaving any other active sessions unaffected, and clears the token from the browser.
+## 📡 API Reference
 
-## Setup & Run
+### Auth (`/api/auth`)
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the server (listens on `process.env.PORT` or defaults to `3000`):
-   ```bash
-   npm start
-   ```
-   The SQLite database (`database/todo.db`) and tables (`users`, `sessions`, `tasks`) are created automatically on first startup.
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/auth/register` | No | Register new user |
+| `POST` | `/api/auth/login` | No | Login for session token |
+| `GET` | `/api/auth/me` | Yes | Get active user profile |
+| `POST` | `/api/auth/change-password` | Yes | Update password |
+| `POST` | `/api/auth/logout` | Yes | Revoke session token |
 
-## Running Tests
+### Tasks (`/api/tasks`)
 
-```bash
-npm test
-```
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/tasks` | Yes | List/filter user tasks |
+| `POST` | `/api/tasks` | Yes | Create a new task |
+| `GET` | `/api/tasks/:id` | Yes | Get task by ID |
+| `PATCH` | `/api/tasks/:id` | Yes | Update task or status |
+| `DELETE` | `/api/tasks/:id` | Yes | Delete task |
 
-## Design Assumptions & Security Notes
+## ⚡ Quick Start
+1. **Install dependencies:** `npm install`
+2. **Start server:** `npm start` *(Runs on `http://localhost:3000`)*
+3. **Run tests:** `npm test`
 
-- **Token Lifetime:** Session tokens expire after **24 hours** (`86400` seconds) and are revoked immediately upon `POST /api/auth/logout`.
-- **Browser Token Storage & Trade-offs:** The token is stored in `localStorage` so sessions persist across page reloads and are sent explicitly via the `Authorization` header (which prevents CSRF attacks inherent to cookies). The security trade-off is that `localStorage` is accessible to JavaScript if an XSS vulnerability exists; to mitigate this, all user-supplied content is rendered exclusively via `document.createTextNode` / `textContent` rather than `innerHTML`.
+---
+*Built with LocalStorage bearer token architecture and DOM sanitization to mitigate CSRF and XSS risks.*
