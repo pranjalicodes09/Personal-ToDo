@@ -83,4 +83,46 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ id: req.user.id, email: req.user.email, name: req.user.name });
 });
 
+router.post('/change-password', requireAuth, (req, res) => {
+  const currentPassword = req.body.currentPassword || '';
+  const newPassword = req.body.newPassword || '';
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Both current and new passwords are required' });
+  }
+
+  const validPassword =
+    newPassword.length >= 8 &&
+    newPassword.length <= 128 &&
+    /[A-Za-z]/.test(newPassword) &&
+    /\d/.test(newPassword);
+
+  if (!validPassword) {
+    return res.status(400).json({
+      error: 'New password must be 8-128 chars with a letter and a digit'
+    });
+  }
+
+  if (currentPassword === newPassword) {
+    return res.status(400).json({
+      error: 'New password must be different from your current password'
+    });
+  }
+
+  const user = db
+    .prepare('SELECT id, password_hash FROM users WHERE id = ?')
+    .get(req.user.id);
+
+  const isMatch = user && bcrypt.compareSync(currentPassword, user.password_hash);
+  if (!isMatch) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+
+  const passwordHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, req.user.id);
+
+  res.json({ ok: true, message: 'Password changed successfully' });
+});
+
 module.exports = router;
+

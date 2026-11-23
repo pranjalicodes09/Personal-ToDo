@@ -79,11 +79,12 @@
         <button type="button" class="nav-item" data-view="create">+ Create Task</button>
       </nav>
 
-      <div class="sidebar-footer">
+            <div class="sidebar-footer">
         <span id="user-email" class="user-email"></span>
+        <button id="open-pw-btn" type="button" class="pill-btn full-width">Change Password</button>
         <button id="logout-btn" type="button" class="pill-btn full-width">Logout</button>
       </div>
-    </aside>
+      </aside>
 
     <main class="main-panel">
       <p id="app-error" class="error hidden"></p>
@@ -125,10 +126,41 @@
             <button type="submit" class="pill-primary">Save Task</button>
             <button type="button" id="cancel-create-btn" class="pill-btn">Back</button>
           </div>
+               </form>
+      </section>
+
+      <section id="password-panel" class="box hidden">
+        <div class="box-header">
+          <h2>Change Password</h2>
+          <span class="hint">Update your account password</span>
+        </div>
+
+        <form id="password-form">
+          <div class="field">
+            <label for="current-password">Current Password</label>
+            <input id="current-password" type="password" required autocomplete="current-password" />
+          </div>
+
+          <div class="field">
+            <label for="new-password">New Password</label>
+            <input
+              id="new-password"
+              type="password"
+              required
+              autocomplete="new-password"
+              placeholder="8+ chars, 1 letter & 1 number"
+            />
+          </div>
+
+          <div class="form-buttons">
+            <button type="submit" class="pill-primary">Update Password</button>
+            <button type="button" id="cancel-pw-btn" class="pill-btn">Back</button>
+          </div>
         </form>
       </section>
 
       <section id="tasks-panel">
+
                <div class="panel-top">
           <h2 id="panel-title">All Tasks</h2>
           <button type="button" id="quick-add-btn" class="pill-primary">+ New Task</button>

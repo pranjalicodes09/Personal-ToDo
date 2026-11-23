@@ -50,13 +50,20 @@ function openView(view) {
     btn.classList.toggle('active', btn.dataset.view === view);
   });
 
+  document.getElementById('create-panel').classList.add('hidden');
+  document.getElementById('password-panel').classList.add('hidden');
+  document.getElementById('tasks-panel').classList.add('hidden');
+
   if (view === 'create') {
     document.getElementById('create-panel').classList.remove('hidden');
-    document.getElementById('tasks-panel').classList.add('hidden');
     return;
   }
 
-  document.getElementById('create-panel').classList.add('hidden');
+  if (view === 'password') {
+    document.getElementById('password-panel').classList.remove('hidden');
+    return;
+  }
+
   document.getElementById('tasks-panel').classList.remove('hidden');
   currentStatus = view === 'completed' ? 'done' : view;
 
@@ -64,6 +71,7 @@ function openView(view) {
   document.getElementById('panel-title').textContent = titles[view] || 'All Tasks';
   loadTasks();
 }
+
 
 function enterApp(user) {
   document.getElementById('user-email').textContent = user.name ? `${user.name} (${user.email})` : user.email;
@@ -146,6 +154,35 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
   }
 });
 
+document.getElementById('open-pw-btn').addEventListener('click', () => {
+  appError.classList.add('hidden');
+  document.getElementById('password-form').reset();
+  openView('password');
+});
+
+document.getElementById('cancel-pw-btn').addEventListener('click', () => openView('all'));
+
+document.getElementById('password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  appError.classList.add('hidden');
+
+  try {
+    await request('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        currentPassword: document.getElementById('current-password').value,
+        newPassword: document.getElementById('new-password').value
+      })
+    });
+    document.getElementById('password-form').reset();
+    openView('all');
+    alert('Password updated successfully!');
+  } catch (err) {
+    appError.textContent = err.message;
+    appError.classList.remove('hidden');
+  }
+});
+
 document.getElementById('search').addEventListener('input', loadTasks);
 document.getElementById('filter-priority').addEventListener('change', loadTasks);
 document.getElementById('sort-by').addEventListener('change', loadTasks);
@@ -160,16 +197,48 @@ async function loadTasks() {
   if (q) params.set('q', q);
   if (priority) params.set('priority', priority);
 
-  try {
+   try {
     const tasks = await request('/api/tasks?' + params.toString());
     renderTasks(tasks);
+    updateSummary();
   } catch (err) {
     appError.textContent = err.message;
     appError.classList.remove('hidden');
   }
 }
 
+async function updateSummary() {
+  try {
+    const allTasks = await request('/api/tasks');
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    let openCount = 0;
+    let overdueCount = 0;
+    let doneCount = 0;
+
+    allTasks.forEach((task) => {
+      if (task.done) {
+        doneCount++;
+      } else {
+        openCount++;
+        if (task.dueDate && task.dueDate < today) {
+          overdueCount++;
+        }
+      }
+    });
+
+    document.getElementById('count-open').textContent = openCount;
+    document.getElementById('count-overdue').textContent = overdueCount;
+    document.getElementById('count-done').textContent = doneCount;
+  } catch (err) {
+    console.error('Summary update error:', err);
+  }
+}
+
+
 function renderTasks(tasks) {
+
   taskList.textContent = '';
   emptyMsg.classList.toggle('hidden', tasks.length > 0);
   const today = new Date().toISOString().slice(0, 10);
