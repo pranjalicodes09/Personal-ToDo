@@ -1,3 +1,4 @@
+//CLIENT STATE AND CACHED DOM ELEMENTS
 let token = localStorage.getItem('token') || '';
 let isRegister = false;
 let currentStatus = 'all';
@@ -9,6 +10,7 @@ const appError = document.getElementById('app-error');
 const taskList = document.getElementById('task-list');
 const emptyMsg = document.getElementById('empty-msg');
 
+//CENTRALIZED API HELPER
 async function request(url, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = 'Bearer ' + token;

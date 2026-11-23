@@ -1,6 +1,6 @@
 # Personal Planner (Track C — Problem C2)
 
-**Live Demo:** [Personal Planner on Render](https://onrender.com) *(Note: Free tier may take 30–50s to wake up; SQLite resets on redeploy).*
+**Live Demo:** https://personal-todo-jh96.onrender.com *(Note: Free tier may take 30–50s to wake up; SQLite resets on redeploy).*
 
 ---
 

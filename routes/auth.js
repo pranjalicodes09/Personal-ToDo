@@ -1,5 +1,6 @@
+//Imports, Router, and Constants
 const express = require('express');
-const crypto = require('crypto');
+const crypto = require('crypto');//Import Node.js inbuilt crypto module to give unpredicatable tokens
 const bcrypt = require('bcryptjs');
 const db = require('../database/db');
 const requireAuth = require('../middleware/auth');
@@ -7,6 +8,7 @@ const requireAuth = require('../middleware/auth');
 const router = express.Router();
 const SESSION_SECONDS = 24 * 60 * 60;
 
+//Helper fun to create new sessions
 function createSession(userId) {
   const token = crypto.randomBytes(32).toString('hex');
   const now = new Date().toISOString();
@@ -19,6 +21,7 @@ function createSession(userId) {
   return { token, expiresIn: SESSION_SECONDS };
 }
 
+//POST/ api/ auth/ register
 router.post('/register', (req, res) => {
   const { password, name } = req.body || {};
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
@@ -54,6 +57,7 @@ router.post('/register', (req, res) => {
   res.status(201).json({ ...user, ...session, user });
 });
 
+//POST/ API/ AUTH/ LOGIN
 router.post('/login', (req, res) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const password = req.body?.password;
@@ -74,6 +78,7 @@ router.post('/login', (req, res) => {
   });
 });
 
+//POST /LOGOUT, GET /ME, POST /CHANGE-PASSWORD
 router.post('/logout', requireAuth, (req, res) => {
   db.prepare('DELETE FROM sessions WHERE token = ?').run(req.token);
   res.status(204).send();
@@ -83,6 +88,7 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ id: req.user.id, email: req.user.email, name: req.user.name });
 });
 
+//POST/ API/ AUTH/ CHANGE-PASSWORD
 router.post('/change-password', requireAuth, (req, res) => {
   const currentPassword = req.body.currentPassword || '';
   const newPassword = req.body.newPassword || '';

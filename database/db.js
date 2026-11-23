@@ -1,13 +1,18 @@
+//Importing and connecting database
 const path = require('path');
 const Database = require('better-sqlite3');
-
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'todo.db');
 const db = new Database(dbPath);
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+//Configuring Database Settings
+db.pragma('journal_mode = WAL'); //Write Ahead Logging
+db.pragma('foreign_keys = ON');  //Verfies the real user_id
 
-db.exec(`
+//Creating Schemas
+          // exec - execute mult SQL statements 
+          // 1.Users; 2.Sessions; 3.Tasks; 4.Indexes
+  
+  db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
@@ -39,6 +44,7 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-`);
+`);//last two lines are for speeding up quaries and session management
 
 module.exports = db;
+//shared single db for all to reuse the same database connection across the application
